@@ -1,9 +1,13 @@
+import logging
 from utils.function_utils import compute_f1_two_sets
+
 """
 task: legal accusation prediction
 metric: f1 score
 法律判决预测-罪名预测
 """
+
+_logger = logging.getLogger(__name__)
 
 option_list = ["侮辱", "违法发放贷款", "失火", "票据诈骗", "帮助犯罪分子逃避处罚", "重大责任事故", "对非国家工作人员行贿",
                    "非法制造、销售非法制造的注册商标标识", "非法制造、买卖、运输、邮寄、储存枪支、弹药、爆炸物", "非法获取公民个人信息",
@@ -56,7 +60,11 @@ def compute_ljp_accusation(data_dict):
     for example in data_dict:
         question, prediction, answer = example["origin_prompt"], example["prediction"], example["refr"]
 
-        assert answer.startswith("罪名:"), f"answer: {answer} \n question: {question}"
+        if not answer.startswith("罪名:"):
+            _logger.warning("Skipping malformed answer: %r", answer)
+            abstentions += 1
+            score_list.append(0)
+            continue
         answer = answer.replace("罪名:", "")
         answers = answer.split(";")
 
@@ -72,5 +80,7 @@ def compute_ljp_accusation(data_dict):
         score = compute_f1_two_sets(gt_set, pred_set)
         score_list.append(score)
         
+    if not score_list:
+        return {"score": 0.0, "abstention_rate": 1.0}
     f1_score_average = sum(score_list) / len(score_list)
     return {"score": f1_score_average, "abstention_rate": abstentions/len(data_dict)}

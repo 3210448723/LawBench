@@ -1,5 +1,6 @@
 import json
 import os
+import subprocess
 import pandas as pd
 from evaluation_functions import jec_ac, jec_kd, cjft, ydlj, ftcs, jdzy, jetq, ljp_accusation, ljp_article, ljp_imprison, wbfl, xxcq, flzx, wsjd, yqzy, lblj, zxfl, sjjc
 import sys
@@ -64,13 +65,24 @@ def main(argv):
         for dataset_file in dataset_files:
             datafile_name = dataset_file.split(".")[0]
             input_file = os.path.join(system_folder_dir, dataset_file)
-            data_dict = read_json(input_file)
+            try:
+                data_dict = read_json(input_file)
+            except (json.JSONDecodeError, OSError, KeyError, ValueError) as e:
+                print(f"*** Error reading {input_file}: {e} ***")
+                continue
+            if not data_dict:
+                print(f"*** Warning: {datafile_name} is empty, skipping ***")
+                continue
             if datafile_name not in funct_dict:
                 print(f"*** Warning: {datafile_name} is not in funct_dict ***")
                 continue
             print(f"Processing {datafile_name}:")
             score_function = funct_dict[datafile_name]
-            score = score_function(data_dict)
+            try:
+                score = score_function(data_dict)
+            except (ValueError, ZeroDivisionError, KeyError, TypeError, OSError, subprocess.CalledProcessError) as e:
+                print(f"*** Error evaluating {datafile_name}: {e} ***")
+                continue
             print(f"Score of {datafile_name}: {score}")
             results["task"].append(datafile_name)
             results["model_name"].append(system_folder)
