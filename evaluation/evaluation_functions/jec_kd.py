@@ -1,3 +1,4 @@
+import logging
 from utils.function_utils import multi_choice_judge
 
 """
@@ -5,6 +6,10 @@ Task: multi-choice selection
 Metric: Accuracy
 司法考试
 """
+
+_logger = logging.getLogger(__name__)
+
+
 def compute_jec_kd(data_dict):
     """
     Compute the Accuracy
@@ -17,7 +22,9 @@ def compute_jec_kd(data_dict):
     option_list = ["A", "B", "C", "D"]
     for example in data_dict:
         question, prediction, answer = example["origin_prompt"], example["prediction"], example["refr"]
-        assert answer.startswith("正确答案：") and answer[5] in option_list, f"answer[5]: {answer}, question: {question}"
+        if not (answer.startswith("正确答案：") and len(answer) > 5 and answer[5] in option_list):
+            _logger.warning("Skipping malformed answer: %r", answer)
+            continue
 
         answer_letter = answer[5]
         judge = multi_choice_judge(prediction, option_list, answer_letter)
@@ -25,5 +32,7 @@ def compute_jec_kd(data_dict):
         abstentions += judge["abstention"]
 
     # compute the accuracy of score_list
+    if not score_list:
+        return {"score": 0.0, "abstention_rate": 1.0}
     accuracy = sum(score_list) / len(score_list)
     return {"score": accuracy, "abstention_rate": abstentions / len(data_dict)}

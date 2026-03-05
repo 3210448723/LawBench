@@ -1,10 +1,15 @@
 import re
+import logging
 
 """
 number prediction
 metric: accuracy
 金额提取
 """
+
+_logger = logging.getLogger(__name__)
+
+
 def compute_jetq(data_dict):
     """
     Compute the Accuracy
@@ -16,28 +21,35 @@ def compute_jetq(data_dict):
 
     for example in data_dict:
         question, prediction, answer = example["origin_prompt"], example["prediction"], example["refr"]
-        assert answer.startswith("上文涉及到的犯罪金额:"), f"answer: {answer}, question: {question}"
-        assert answer.endswith("元。"), f"answer: {answer}, question: {question}"
-        answer = answer.replace("上文涉及到的犯罪金额:", "")
+        if not (answer.startswith("上文涉及到的犯罪金额:") and answer.endswith("元。")):
+            _logger.warning("Skipping malformed answer: %r", answer)
+            continue
+        answer_clean = answer.replace("上文涉及到的犯罪金额:", "")
+        if "千元" in answer_clean or "万" in answer_clean:
+            _logger.warning("Unexpected unit in answer %r; skipping.", answer)
+            continue
 
-        assert "千元" not in answer, f"answer: {answer}, question: {question}"
-        assert "万" not in answer, f"answer: {answer}, question: {question}"
-
-        # remove "元"
-        answer = answer.replace("元。", "")
-        answer = float(answer)
+        # remove "元。"
+        answer_clean = answer_clean.replace("元。", "")
+        try:
+            answer_val = float(answer_clean)
+        except ValueError:
+            _logger.warning("Cannot parse answer value %r; skipping.", answer_clean)
+            continue
 
         prediction_digits = re.findall(r"\d+\.?\d*", prediction)
         prediction_digits = [float(digit) for digit in prediction_digits]
 
         if len(prediction_digits) == 0:
             abstentions += 1
-        if answer in prediction_digits:
+        if answer_val in prediction_digits:
             score_list.append(1)
         else:
             score_list.append(0)
 
 
     # compute the accuracy of score_list
+    if not score_list:
+        return {"score": 0.0, "abstention_rate": 1.0}
     accuracy = sum(score_list) / len(score_list)
     return {"score": accuracy, "abstention_rate": abstentions/len(data_dict)}

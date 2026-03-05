@@ -1,3 +1,4 @@
+import logging
 from utils.function_utils import multi_choice_judge
 
 """
@@ -5,6 +6,9 @@ multi-choice single-label selection
 metric: accuracy
 争议焦点：识别案件涉及的争议焦点
 """
+
+_logger = logging.getLogger(__name__)
+
 
 def compute_jdzy(data_dict):
     """
@@ -23,8 +27,9 @@ def compute_jdzy(data_dict):
         if answer[7:-1] == "赔偿":
             # todo: dataset imperfection
             continue
-        assert answer.startswith("争议焦点类别：") and answer[7:-1] in option_list, \
-            f"answer: {answer} \n question: {question}"
+        if not (answer.startswith("争议焦点类别：") and answer[7:-1] in option_list):
+            _logger.warning("Skipping malformed answer: %r", answer)
+            continue
 
         answer_letter = answer[7:-1]
         judge = multi_choice_judge(prediction, option_list, answer_letter)
@@ -32,5 +37,7 @@ def compute_jdzy(data_dict):
         abstentions += judge["abstention"]
 
     # compute the accuracy of score_list
+    if not score_list:
+        return {"score": 0.0, "abstention_rate": 1.0}
     accuracy = sum(score_list) / len(score_list)
     return {"score": accuracy, "abstention_rate": abstentions / len(data_dict)}

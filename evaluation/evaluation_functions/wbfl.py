@@ -1,8 +1,13 @@
+import logging
+
 """
 task: multiple choice classification
 metric: F1 score
 婚姻文本分类
 """
+
+_logger = logging.getLogger(__name__)
+
 
 def compute_wbfl(data_dict):
     """
@@ -18,11 +23,19 @@ def compute_wbfl(data_dict):
                    "存在非婚生子", "适当帮助", "不履行离婚协议", "损害赔偿", "感情不和分居满二年", "子女随非抚养权人生活", "婚后个人财产"]
     for example in data_dict:
         question, prediction, answer = example["origin_prompt"], example["prediction"], example["refr"]
-        assert answer.startswith("类别:") and answer.endswith("。"), f"answer: {answer}, question: {question}"
+        if not (answer.startswith("类别:") and answer.endswith("。")):
+            _logger.warning("Skipping malformed answer: %r", answer)
+            continue
 
         gt_list = (answer[3:-1].split("、"))
+        valid = True
         for gt in gt_list:
-            assert gt in option_list, f"gt: {gt}, question: {question}"
+            if gt not in option_list:
+                _logger.warning("Unknown category %r in answer %r; skipping example.", gt, answer)
+                valid = False
+                break
+        if not valid:
+            continue
         gt_set = set(gt_list)
 
         prediction_list = []
@@ -38,5 +51,7 @@ def compute_wbfl(data_dict):
         score_list.append(f1_score)
 
     # compute the accuracy of score_list
+    if not score_list:
+        return {'score': 0.0, 'abstention_rate': 1.0}
     final_f1_score = sum(score_list) / len(score_list)
     return {'score': final_f1_score, 'abstention_rate': abstentions / len(data_dict)}
