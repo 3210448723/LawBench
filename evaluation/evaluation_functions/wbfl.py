@@ -25,6 +25,8 @@ def compute_wbfl(data_dict):
         question, prediction, answer = example["origin_prompt"], example["prediction"], example["refr"]
         if not (answer.startswith("类别:") and answer.endswith("。")):
             _logger.warning("Skipping malformed answer: %r", answer)
+            abstentions += 1
+            score_list.append(0)
             continue
 
         gt_list = (answer[3:-1].split("、"))
@@ -35,6 +37,8 @@ def compute_wbfl(data_dict):
                 valid = False
                 break
         if not valid:
+            abstentions += 1
+            score_list.append(0)
             continue
         gt_set = set(gt_list)
 

@@ -25,10 +25,14 @@ def compute_jdzy(data_dict):
     for example in data_dict:
         question, prediction, answer = example["origin_prompt"], example["prediction"], example["refr"]
         if answer[7:-1] == "赔偿":
-            # todo: dataset imperfection
+            # todo: dataset imperfection – count as abstention so the denominator stays correct
+            abstentions += 1
+            score_list.append(0)
             continue
         if not (answer.startswith("争议焦点类别：") and answer[7:-1] in option_list):
             _logger.warning("Skipping malformed answer: %r", answer)
+            abstentions += 1
+            score_list.append(0)
             continue
 
         answer_letter = answer[7:-1]

@@ -23,10 +23,14 @@ def compute_jetq(data_dict):
         question, prediction, answer = example["origin_prompt"], example["prediction"], example["refr"]
         if not (answer.startswith("上文涉及到的犯罪金额:") and answer.endswith("元。")):
             _logger.warning("Skipping malformed answer: %r", answer)
+            abstentions += 1
+            score_list.append(0)
             continue
         answer_clean = answer.replace("上文涉及到的犯罪金额:", "")
         if "千元" in answer_clean or "万" in answer_clean:
             _logger.warning("Unexpected unit in answer %r; skipping.", answer)
+            abstentions += 1
+            score_list.append(0)
             continue
 
         # remove "元。"
@@ -35,6 +39,8 @@ def compute_jetq(data_dict):
             answer_val = float(answer_clean)
         except ValueError:
             _logger.warning("Cannot parse answer value %r; skipping.", answer_clean)
+            abstentions += 1
+            score_list.append(0)
             continue
 
         prediction_digits = re.findall(r"\d+\.?\d*", prediction)

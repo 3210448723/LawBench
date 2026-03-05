@@ -27,6 +27,8 @@ def compute_ljp_article(data_dict):
         question, prediction, answer = example["origin_prompt"], example["prediction"], example["refr"]
         if not (answer.startswith("法条:刑法第") and answer.endswith("条")):
             _logger.warning("Skipping malformed answer: %r", answer)
+            abstentions += 1
+            score_list.append(0)
             continue
 
         answer = answer.replace("法条:刑法第", "")
@@ -47,6 +49,8 @@ def compute_ljp_article(data_dict):
                 break
             answer_law_index_digit_list.append(answer_law_index_digit)
         if not valid:
+            abstentions += 1
+            score_list.append(0)
             continue
 
         prediction_law_chunks = prediction.split("、")

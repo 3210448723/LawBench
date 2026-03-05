@@ -24,6 +24,8 @@ def compute_lblj(data_dict):
         question, prediction, answer = example["origin_prompt"], example["prediction"], example["refr"]
         if not (answer.startswith("[正确答案]") and len(answer) > 6 and answer[6] in option_list):
             _logger.warning("Skipping malformed answer: %r", answer)
+            abstentions += 1
+            score_list.append(0)
             continue
 
         answer_letter = answer[6]

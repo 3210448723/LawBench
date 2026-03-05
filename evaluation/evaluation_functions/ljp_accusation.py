@@ -62,6 +62,8 @@ def compute_ljp_accusation(data_dict):
 
         if not answer.startswith("罪名:"):
             _logger.warning("Skipping malformed answer: %r", answer)
+            abstentions += 1
+            score_list.append(0)
             continue
         answer = answer.replace("罪名:", "")
         answers = answer.split(";")

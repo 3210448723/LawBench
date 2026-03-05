@@ -24,6 +24,8 @@ def compute_jec_kd(data_dict):
         question, prediction, answer = example["origin_prompt"], example["prediction"], example["refr"]
         if not (answer.startswith("正确答案：") and len(answer) > 5 and answer[5] in option_list):
             _logger.warning("Skipping malformed answer: %r", answer)
+            abstentions += 1
+            score_list.append(0)
             continue
 
         answer_letter = answer[5]
